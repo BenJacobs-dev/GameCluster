@@ -1,6 +1,6 @@
 # GameCluster
 
-##Current Game List:
+## Current Game List:
 
 ### Minesweeper:
 
