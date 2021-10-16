@@ -114,7 +114,6 @@ public class IKFun extends Application{
 				Line keptLine = lineList.get(index), removedLine = lineList.get(index+1);
 				keptLine.setStartX(removedLine.getStartX());
 				keptLine.setStartY(removedLine.getStartY());
-				System.out.println(getLength(keptLine));
 				lineLengthsList.set(index, getLength(keptLine));
 				lineList.remove(index+1);
 				lineLengthsList.remove(index+1);
@@ -281,6 +280,8 @@ public class IKFun extends Application{
 			}
 			isStart = !isStart;
 		}
+		lineList.get(0).setEndX(end.getCenterX());
+		lineList.get(0).setEndY(end.getCenterY());
 		semaphore.release();
 	}
 	
@@ -329,13 +330,13 @@ public class IKFun extends Application{
 	
 	public double getAngleAnchorStart(Line line) {
 		double x = line.getStartX()-line.getEndX();
-		double y = line.getStartY()-line.getEndY();
+		double y = line.getStartY()-line.getEndY()-10;
 		return x < 0 ? TP+Math.atan(y/x) : Math.atan(y/x)+HP;
 	}
 	
 	public double getAngleAnchorEnd(Line line) {
 		double x = -(line.getStartX()-line.getEndX());
-		double y = -(line.getStartY()-line.getEndY());
+		double y = -(line.getStartY()-line.getEndY()-10);
 		return x <= 0 ? TP+Math.atan(y/x) : Math.atan(y/x)+HP;
 	}
 	
