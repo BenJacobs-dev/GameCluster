@@ -26,14 +26,15 @@ public class FractalMaker extends Application{
 	//                Edit here                  //
 	///////////////////////////////////////////////
 	
-	int modNum = 8, screen = 1000, pixelSize = 1, blackStart = 10, fps = 1000;
-	double rightShift = .5, downShift = 0;
-	double xMulti = 1.5, multiIn = 0.00001, displayBounds = 1.25;
-	boolean autoIterate = false; //true;
+	int modNum = 12, screen = 1000, pixelSize = 1, blackStart = 10, fps = 1000, iterations = 100;
+	double screenCenterX = -0.5, screenCenterY = 0, verticalBounds = 1.25; // horizontalBound = verticalBounds*xMulti
+	double xMulti = 1.5, multiIn = 0.00001;
 	
 	///////////////////////////////////////////////
 	
-	int size = screen/pixelSize, sizeX = (int)(size*xMulti), sizeY = size, mapSizeX = (int)(xMulti*screen/sizeX), mapSizeY = screen/sizeY, displaySizeX = sizeX*mapSizeX,  displaySizeY = sizeY*mapSizeY, fpsMulti = 1000/fps;
+	int size = screen/pixelSize, sizeX = (int)(size*xMulti), sizeY = size, mapSizeX = (int)(xMulti*screen/sizeX), mapSizeY = screen/sizeY;
+	int displaySizeX = sizeX*mapSizeX,  displaySizeY = sizeY*mapSizeY, fpsMulti = 1000/fps;
+	int curIter = 0, iterCount = iterations;
 
 	Stage stage;
 	double grid[][][];
@@ -44,11 +45,12 @@ public class FractalMaker extends Application{
 	HashMap<Integer, Color> colorList;
 	PixelWriter imgWriter;
 	final Semaphore semaphore = new Semaphore(1);
-	final AtomicBoolean running = new AtomicBoolean(false);
+	final AtomicBoolean running = new AtomicBoolean(false), stopped = new AtomicBoolean(true);
 	boolean playing;
 	Text fpsCounterText;
 	int ballAddCounter;
 	volatile double multi = 1;
+	double rectCenterX = 0, rectCenterY = 0, rectCornerX = 0, rectCornerY = 0, xDif = 1, yDif = 1;
 
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -58,22 +60,86 @@ public class FractalMaker extends Application{
 
 		createColorList();
 		
+		modNum = colorList.size()-1;
+		
 		stage = primaryStage;
 		stage.setTitle("PatternMaker");
 		
 		Group nodeGroup = new Group();
 		nodeList = nodeGroup.getChildren();
+		
+		Polygon newScreenDimensions = new Polygon(0,0,0,0,0,0,0,0);
+		ObservableList<Double> points = newScreenDimensions.getPoints();
+		newScreenDimensions.setFill(Color.TRANSPARENT);
+		newScreenDimensions.setStroke(Color.WHITE);
 
 		Rectangle mapRect = new Rectangle(0, 0, displaySizeX, displaySizeY);
-		
-		grid = new double[sizeX][sizeY][6];
-		for(int i = 0, j, hSizeX = sizeX>>1, hSizeY = sizeY>>1; i < sizeX; i++) {
-			for(j = 0; j < sizeY; j++) {
-				grid[i][j][1] = (displayBounds*(i-hSizeX))/hSizeY-rightShift;
-				grid[i][j][2] = (displayBounds*(j-hSizeY))/hSizeY+downShift;
-				grid[i][j][5] = Math.sqrt(grid[i][j][1]*grid[i][j][1] + grid[i][j][2]*grid[i][j][2]);
+		mapRect.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+			rectCenterX = event.getSceneX();
+			rectCenterY = event.getSceneY();
+			rectCornerX = event.getSceneX();
+			rectCornerY = event.getSceneY();
+			xDif = (rectCornerX-rectCenterX);
+			yDif = (rectCornerY-rectCenterY);
+			xDif = xDif < 0 ? -xDif : xDif;
+			yDif = yDif < 0 ? -yDif : yDif;
+			if(xDif < yDif*xMulti) {
+				xDif = (int)(yDif*xMulti);
 			}
-		}
+			else {
+				yDif = (int)(xDif/xMulti);
+			}
+			points.setAll(
+					xDif+rectCenterX,
+					yDif+rectCenterY,
+					(-xDif)+rectCenterX,
+					yDif+rectCenterY,
+					(-xDif)+rectCenterX,
+					(-yDif)+rectCenterY,
+					xDif+rectCenterX,
+					(-yDif)+rectCenterY);
+			newScreenDimensions.setVisible(true);
+		});
+		mapRect.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
+			rectCornerX = event.getSceneX();
+			rectCornerY = event.getSceneY();
+			xDif = (rectCornerX-rectCenterX);
+			yDif = (rectCornerY-rectCenterY);
+			xDif = xDif < 0 ? -xDif : xDif;
+			yDif = yDif < 0 ? -yDif : yDif;
+			if(xDif < yDif*xMulti) {
+				xDif = (int)(yDif*xMulti);
+			}
+			else {
+				yDif = (int)(xDif/xMulti);
+			}
+			points.setAll(
+					xDif+rectCenterX,
+					yDif+rectCenterY,
+					(-xDif)+rectCenterX,
+					yDif+rectCenterY,
+					(-xDif)+rectCenterX,
+					(-yDif)+rectCenterY,
+					xDif+rectCenterX,
+					(-yDif)+rectCenterY);
+			
+		});
+		mapRect.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
+			newScreenDimensions.setVisible(false);
+			if(yDif >= 3) {
+				screenCenterX += verticalBounds*2*(rectCenterX-(displaySizeX>>1))/displaySizeY;
+				screenCenterY -= verticalBounds*2*(rectCenterY-(displaySizeY>>1))/displaySizeY;
+				verticalBounds*= 2*yDif/displaySizeY;
+				curIter = 0;
+				initGrid();
+				updateGrid();
+				updateDisplay();
+			}
+		});
+		
+		grid = new double[sizeX][sizeY][5];
+		initGrid();
+		updateGrid();
 		
 		WritableImage img = new WritableImage(displaySizeX, displaySizeY);
 		imgWriter = img.getPixelWriter();
@@ -88,118 +154,91 @@ public class FractalMaker extends Application{
 			}
 		});
 		
-		/*
-		TextField valTextIn = new TextField();
-		valTextIn.setAlignment(Pos.CENTER);
-		valTextIn.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				try {
-					multi = Double.parseDouble(valTextIn.getText());
-					
-				}
-				catch (Exception e){
-					multi = 1;
-				}
-				//multi *= modNum;
-				//updateGrid();
-			}
-		});
-		
-		Slider valSliderIn = new Slider(0, 9, 5);
-		valSliderIn.setMajorTickUnit(1);
-		valSliderIn.setMinorTickCount(0);
-        valSliderIn.setShowTickMarks(true);
-        valSliderIn.setShowTickLabels(true);
-		valSliderIn.setPrefWidth(250);
-		valSliderIn.setSnapToTicks(true);
-		valSliderIn.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
-			@Override 
-			public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing){
-				if(wasChanging) {
-					try {
-						multi = Double.parseDouble(valTextIn.getText());
-						
-					}
-					catch (Exception e){
-						multi = 1;
-					}
-					String[] splitStrings = valTextIn.getText().split("\\.");
-					if(splitStrings.length > 1) {
-						multi += Math.pow(10, -1*splitStrings[1].length())*(((int)(valSliderIn.getValue()))/10.0);
-					}
-					else {
-						multi += valSliderIn.getValue();
-					}
-					
-					
-					//valTextIn.setText(valTextIn.getText()+((int)(valSliderIn.getValue())));
-					//updateGrid();
-				}
-			}
-		});
-		
-		VBox inputBox = new VBox(valTextIn, valSliderIn);
-		inputBox.setAlignment(Pos.BOTTOM_LEFT);
-		*/
-		
 		nodeList.add(mapRect);
-		nodeList.add(iterButton);
+		nodeList.add(newScreenDimensions);
+		//nodeList.add(iterButton);
 
 		Scene scene = new Scene(nodeGroup, displaySizeX, displaySizeY);
-
+		scene.addEventFilter(KeyEvent.KEY_PRESSED , key -> {
+			if(key.getCode() == KeyCode.SPACE) {
+				updateGrid();
+				updateDisplay();
+			}
+			else if(key.getCode() == KeyCode.ENTER) {
+				if(iterCount == 1) {
+					iterCount = iterations;
+					stopped.set(true);
+				}
+				else {
+					iterCount = 1;
+					stopped.set(false);
+				}
+			}
+			else {
+				if(key.getCode() == KeyCode.ESCAPE) {
+					screenCenterX = -0.5;
+					screenCenterY = 0;
+					verticalBounds= 1.25;
+				}
+				else if(key.getCode() == KeyCode.W){
+					verticalBounds *= 0.5;
+				}
+				else if(key.getCode() == KeyCode.S){
+					verticalBounds *= 2;
+				}
+				else if(key.getCode() == KeyCode.UP){
+					screenCenterY += verticalBounds*0.5;
+				}
+				else if(key.getCode() == KeyCode.DOWN){
+					screenCenterY -= verticalBounds*0.5;
+				}
+				else if(key.getCode() == KeyCode.LEFT){
+					screenCenterX -= xMulti*verticalBounds*0.5;
+				}
+				else if(key.getCode() == KeyCode.RIGHT){
+					screenCenterX += xMulti*verticalBounds*0.5;
+				}
+				curIter = 0;
+				initGrid();
+				updateGrid();
+				updateDisplay();
+			}
+		});
+		
 		stage.setScene(scene);
 		stage.show();
 		updateDisplay();
 		
-		if(autoIterate) {
-			Task<Void> task = new Task<Void>() {
-	
-				long time;
-	
-				@Override
-				protected Void call() throws Exception {
-					try {
-						time = System.currentTimeMillis();
-						running.set(true);
-						while(running.get()) {
-							semaphore.acquire();
-							Thread.sleep(Math.max(fpsMulti+time-System.currentTimeMillis(), 0));
-							time = System.currentTimeMillis();
-							
-							multi += multiIn;
-							
-							Platform.runLater(() -> {
-								updateGrid();
-								updateDisplay();
-								semaphore.release();
-							});
-						}
-					}catch(Exception e){e.printStackTrace();}
-					return null;
-				}
-			};
-	
-			new Thread(task).start();
-		}
-	}
+		
+		Task<Void> task = new Task<Void>() {
 
-	public void updateGridOld() {
-		double xTemp;
-		for(int i = 0, j; i < sizeX; i++) {
-			for(j = 0; j < sizeY; j++) {
-				for(int count = 100; count >= 0; count--)
-				if(grid[i][j][5] != Double.POSITIVE_INFINITY ) {
-					grid[i][j][0]++;
-					xTemp = grid[i][j][3]*grid[i][j][3]-grid[i][j][4]*grid[i][j][4]+grid[i][j][1];
-					grid[i][j][4] = 2*grid[i][j][3]*grid[i][j][4]+grid[i][j][2];
-					grid[i][j][3] = xTemp;
-					grid[i][j][5] = Math.sqrt(grid[i][j][3]*grid[i][j][3] + grid[i][j][4]*grid[i][j][4]);
-				}else {
-					break;
-				}
+			long time;
+
+			@Override
+			protected Void call() throws Exception {
+				try {
+					time = System.currentTimeMillis();
+					running.set(true);
+					while(running.get()) {
+						while(stopped.get());
+						semaphore.acquire();
+						Thread.sleep(Math.max(fpsMulti+time-System.currentTimeMillis(), 0));
+						time = System.currentTimeMillis();
+						
+						multi += multiIn;
+						
+						Platform.runLater(() -> {
+							updateGrid();
+							updateDisplay();
+							semaphore.release();
+						});
+					}
+				}catch(Exception e){e.printStackTrace();}
+				return null;
 			}
-		}
+		};
+
+		new Thread(task).start();
 	}
 	
 	public void updateGrid() {
@@ -208,19 +247,22 @@ public class FractalMaker extends Application{
 			for(j = 0; j < sizeY; j++) {
 				x2 = grid[i][j][3]*grid[i][j][3];
 				y2 = grid[i][j][4]*grid[i][j][4];
-				for(int count = 100; count >= 0; count--)
+				for(int count = iterCount; count > 0; count--)
 				if(x2+y2 <= 4) {
-					grid[i][j][0]++;
 					grid[i][j][4] = (grid[i][j][3]+grid[i][j][3])*grid[i][j][4]+grid[i][j][2];
 					grid[i][j][3] = x2-y2+grid[i][j][1];
 					x2 = grid[i][j][3]*grid[i][j][3];
 					y2 = grid[i][j][4]*grid[i][j][4];
 				}
 				else {
+					if(grid[i][j][0] == -1) {
+						grid[i][j][0] = curIter+count;
+					}
 					break;
 				}
 			}
 		}
+		curIter += iterCount;
 	}
 	
 	public void updateDisplay() {
@@ -246,24 +288,39 @@ public class FractalMaker extends Application{
 		}
 	}
 	
+	public void initGrid() {
+		for(int i = 0, j, hSizeX = sizeX>>1, hSizeY = sizeY>>1; i < sizeX; i++) {
+			for(j = 0; j < sizeY; j++) {
+				grid[i][j][0] = -1;
+				grid[i][j][1] = (verticalBounds*(i-hSizeX))/hSizeY+screenCenterX;
+				grid[i][j][2] = (verticalBounds*(j-hSizeY))/hSizeY-screenCenterY;
+				grid[i][j][3] = 0;
+				grid[i][j][4] = 0;
+			}
+		}
+	}
+	
 	public void createColorList(){
 		colorList = new HashMap<>();
-		colorList.put(0, Color.BLACK);
-		colorList.put(1, Color.RED);
+		colorList.put(-1, Color.BLACK);
+		colorList.put(0, Color.RED);
+		colorList.put(1, Color.ORANGERED);
 		colorList.put(2, Color.ORANGE);
-		colorList.put(3, Color.YELLOW);
-		colorList.put(4, Color.GREEN);
-		colorList.put(5, Color.BLUE);
-		colorList.put(6, Color.PURPLE);
-		for(blackStart = Math.min(blackStart, 7); blackStart < modNum; blackStart++) {
-			colorList.put(blackStart, Color.BLACK);
-		}
+		colorList.put(3, Color.GOLD);
+		colorList.put(4, Color.YELLOW);
+		colorList.put(5, Color.YELLOWGREEN);
+		colorList.put(6, Color.GREEN);
+		colorList.put(7, Color.DARKCYAN);
+		colorList.put(8, Color.BLUE);
+		colorList.put(9, Color.SLATEBLUE);
+		colorList.put(10, Color.PURPLE);
+		colorList.put(11, Color.MEDIUMVIOLETRED);
 	}
 	
 	@Override
 	public void stop() {
-		System.out.println("Stop");
 		running.set(false);
+		stopped.set(false);
 		semaphore.release(100);
 	}
 }
