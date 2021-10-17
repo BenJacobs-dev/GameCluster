@@ -27,7 +27,7 @@ public class FractalMaker extends Application{
 	///////////////////////////////////////////////
 	
 	int modNum = 12, screen = 1000, pixelSize = 1, blackStart = 10, fps = 1000, iterations = 100;
-	double screenCenterX = -0.5, screenCenterY = 0, verticalBounds = 1.25; // horizontalBound = verticalBounds*xMulti
+	double screenCenterX = -.5, screenCenterY = 0, verticalBounds = 1.25; // horizontalBound = verticalBounds*xMulti
 	double xMulti = 1.5, multiIn = 0.00001;
 	
 	///////////////////////////////////////////////
@@ -51,6 +51,7 @@ public class FractalMaker extends Application{
 	int ballAddCounter;
 	volatile double multi = 1;
 	double rectCenterX = 0, rectCenterY = 0, rectCornerX = 0, rectCornerY = 0, xDif = 1, yDif = 1;
+	Line[] lines;
 
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -59,6 +60,12 @@ public class FractalMaker extends Application{
 	public void start(Stage primaryStage){
 
 		createColorList();
+		
+		lines = new Line[2000];
+		for(int i = 0; i < lines.length; i++) {
+			lines[i] = new Line(); 
+			lines[i].setStroke(Color.WHITE);
+		}
 		
 		modNum = colorList.size()-1;
 		
@@ -75,65 +82,81 @@ public class FractalMaker extends Application{
 
 		Rectangle mapRect = new Rectangle(0, 0, displaySizeX, displaySizeY);
 		mapRect.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
-			rectCenterX = event.getSceneX();
-			rectCenterY = event.getSceneY();
-			rectCornerX = event.getSceneX();
-			rectCornerY = event.getSceneY();
-			xDif = (rectCornerX-rectCenterX);
-			yDif = (rectCornerY-rectCenterY);
-			xDif = xDif < 0 ? -xDif : xDif;
-			yDif = yDif < 0 ? -yDif : yDif;
-			if(xDif < yDif*xMulti) {
-				xDif = (int)(yDif*xMulti);
+			if(event.getButton() == MouseButton.SECONDARY) {
+				calculateLines(event.getSceneX(), event.getSceneY());
 			}
 			else {
-				yDif = (int)(xDif/xMulti);
+				rectCenterX = event.getSceneX();
+				rectCenterY = event.getSceneY();
+				rectCornerX = event.getSceneX();
+				rectCornerY = event.getSceneY();
+				xDif = (rectCornerX-rectCenterX);
+				yDif = (rectCornerY-rectCenterY);
+				xDif = xDif < 0 ? -xDif : xDif;
+				yDif = yDif < 0 ? -yDif : yDif;
+				if(xDif < yDif*xMulti) {
+					xDif = (int)(yDif*xMulti);
+				}
+				else {
+					yDif = (int)(xDif/xMulti);
+				}
+				points.setAll(
+						xDif+rectCenterX,
+						yDif+rectCenterY,
+						(-xDif)+rectCenterX,
+						yDif+rectCenterY,
+						(-xDif)+rectCenterX,
+						(-yDif)+rectCenterY,
+						xDif+rectCenterX,
+						(-yDif)+rectCenterY);
+				newScreenDimensions.setVisible(true);
 			}
-			points.setAll(
-					xDif+rectCenterX,
-					yDif+rectCenterY,
-					(-xDif)+rectCenterX,
-					yDif+rectCenterY,
-					(-xDif)+rectCenterX,
-					(-yDif)+rectCenterY,
-					xDif+rectCenterX,
-					(-yDif)+rectCenterY);
-			newScreenDimensions.setVisible(true);
 		});
 		mapRect.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
-			rectCornerX = event.getSceneX();
-			rectCornerY = event.getSceneY();
-			xDif = (rectCornerX-rectCenterX);
-			yDif = (rectCornerY-rectCenterY);
-			xDif = xDif < 0 ? -xDif : xDif;
-			yDif = yDif < 0 ? -yDif : yDif;
-			if(xDif < yDif*xMulti) {
-				xDif = (int)(yDif*xMulti);
+			if(event.getButton() == MouseButton.SECONDARY) {
+				calculateLines(event.getSceneX(), event.getSceneY());
 			}
 			else {
-				yDif = (int)(xDif/xMulti);
+				rectCornerX = event.getSceneX();
+				rectCornerY = event.getSceneY();
+				xDif = (rectCornerX-rectCenterX);
+				yDif = (rectCornerY-rectCenterY);
+				xDif = xDif < 0 ? -xDif : xDif;
+				yDif = yDif < 0 ? -yDif : yDif;
+				if(xDif < yDif*xMulti) {
+					xDif = (int)(yDif*xMulti);
+				}
+				else {
+					yDif = (int)(xDif/xMulti);
+				}
+				points.setAll(
+						xDif+rectCenterX,
+						yDif+rectCenterY,
+						(-xDif)+rectCenterX,
+						yDif+rectCenterY,
+						(-xDif)+rectCenterX,
+						(-yDif)+rectCenterY,
+						xDif+rectCenterX,
+						(-yDif)+rectCenterY);
 			}
-			points.setAll(
-					xDif+rectCenterX,
-					yDif+rectCenterY,
-					(-xDif)+rectCenterX,
-					yDif+rectCenterY,
-					(-xDif)+rectCenterX,
-					(-yDif)+rectCenterY,
-					xDif+rectCenterX,
-					(-yDif)+rectCenterY);
-			
 		});
 		mapRect.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
-			newScreenDimensions.setVisible(false);
-			if(yDif >= 3) {
-				screenCenterX += verticalBounds*2*(rectCenterX-(displaySizeX>>1))/displaySizeY;
-				screenCenterY -= verticalBounds*2*(rectCenterY-(displaySizeY>>1))/displaySizeY;
-				verticalBounds*= 2*yDif/displaySizeY;
-				curIter = 0;
-				initGrid();
-				updateGrid();
-				updateDisplay();
+			if(event.getButton() == MouseButton.SECONDARY) {
+				for(int i = 0; i < lines.length; i++) {
+					lines[i].setVisible(false);
+				}
+			}
+			else {
+				newScreenDimensions.setVisible(false);
+				if(yDif >= 3) {
+					screenCenterX += verticalBounds*2*(rectCenterX-(displaySizeX>>1))/displaySizeY;
+					screenCenterY -= verticalBounds*2*(rectCenterY-(displaySizeY>>1))/displaySizeY;
+					verticalBounds*= 2*yDif/displaySizeY;
+					curIter = 0;
+					initGrid();
+					updateGrid();
+					updateDisplay();
+				}
 			}
 		});
 		
@@ -144,19 +167,10 @@ public class FractalMaker extends Application{
 		WritableImage img = new WritableImage(displaySizeX, displaySizeY);
 		imgWriter = img.getPixelWriter();
 		mapRect.setFill(new ImagePattern(img));
-
-		Button iterButton = new Button("Iterate");
-		iterButton.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				updateGrid();
-				updateDisplay();
-			}
-		});
 		
 		nodeList.add(mapRect);
 		nodeList.add(newScreenDimensions);
-		//nodeList.add(iterButton);
+		nodeList.addAll(lines);
 
 		Scene scene = new Scene(nodeGroup, displaySizeX, displaySizeY);
 		scene.addEventFilter(KeyEvent.KEY_PRESSED , key -> {
@@ -315,6 +329,51 @@ public class FractalMaker extends Application{
 		colorList.put(9, Color.SLATEBLUE);
 		colorList.put(10, Color.PURPLE);
 		colorList.put(11, Color.MEDIUMVIOLETRED);
+	}
+	
+	public void calculateLines(double mousePosX, double mousePosY) {
+		//				 verticalBounds*2*(rectCenterX-(displaySizeX>>1)) /displaySizeY               ;
+		//				(verticalBounds*  (i          -hSizeX		    ))/hSizeY       +screenCenterX;
+		
+		double relPosX = intoSetSpaceX(mousePosX);
+		double relPosY = intoSetSpaceY(mousePosY);
+		double x2 = relPosX*relPosX;
+		double y2 = relPosY*relPosY;
+		lines[0].setVisible(true);
+		lines[0].setStartX((displaySizeX>>1)-(screenCenterX*(displaySizeY>>1))/verticalBounds);
+		lines[0].setStartY((displaySizeY>>1)+(screenCenterY*(displaySizeY>>1))/verticalBounds);
+		lines[0].setEndX(mousePosX);
+		lines[0].setEndY(mousePosY);
+		for(int i = 1; i < lines.length; i++) {
+			lines[i].setVisible(true);
+			lines[i].setStartX(lines[i-1].getEndX());
+			lines[i].setStartY(lines[i-1].getEndY());
+			if(x2+y2 <= 3000) {
+				lines[i].setEndY(outSetSpaceY((intoSetSpaceX(lines[i-1].getEndX())+intoSetSpaceX(lines[i-1].getEndX()))*intoSetSpaceY(lines[i-1].getEndY())+relPosY));
+				lines[i].setEndX(outSetSpaceX(x2-y2+relPosX));
+				x2 = intoSetSpaceX(lines[i].getEndX())*intoSetSpaceX(lines[i].getEndX());
+				y2 = intoSetSpaceY(lines[i].getEndY())*intoSetSpaceY(lines[i].getEndY());
+			}
+			else {
+				lines[i].setVisible(false);
+			}
+		}
+	}
+	
+	public double intoSetSpaceX(double input) {
+		return screenCenterX+(verticalBounds*(input-(displaySizeX>>1))/(displaySizeY>>1));
+	}
+	
+	public double intoSetSpaceY(double input) {
+		return screenCenterY-(verticalBounds*(input-(displaySizeY>>1))/(displaySizeY>>1));
+	}
+	
+	public double outSetSpaceX(double input) {
+		return ((displaySizeY>>1)*(input-screenCenterX)/verticalBounds)+(displaySizeX>>1);
+	}
+	
+	public double outSetSpaceY(double input) {
+		return ((displaySizeY>>1)*(-input+screenCenterY)/verticalBounds)+(displaySizeY>>1);
 	}
 	
 	@Override
