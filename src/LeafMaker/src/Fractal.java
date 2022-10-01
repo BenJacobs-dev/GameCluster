@@ -1,23 +1,30 @@
-package fractal;
+import java.util.ArrayList;
 
 import javafx.application.Application;
-import javafx.stage.Stage;
-import javafx.scene.*;
-import javafx.scene.control.*;
-import javafx.scene.text.*;
-import javafx.scene.paint.*;
-import javafx.scene.shape.*;
-import javafx.scene.layout.*;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
-import javafx.event.*;
-import java.util.*;
-import java.io.*;
-import javafx.collections.*;
-import javafx.beans.value.*;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Slider;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
 public class Fractal extends Application {
+
+  int displaySizeX = 1800, displaySizeY = 900;
+  boolean spike = false;
 
   Group lineGroup;
   ObservableList<Node> lineList;
@@ -25,10 +32,14 @@ public class Fractal extends Application {
   double lineLength;
   Stage stage;
   VBox menuPanel;
-  // IntField lengthMultiField, angleField, lengthField;
-  Slider lengthMultiField, angleField, lengthField;
-  CheckBox randomColorBox, inwardModeBox, oneLineBox, bothSidesBox, dragonCurveBox, angleInvertionBox;
+  Slider leafThicknessField, lengthMultiField, angleField, lengthField;
+  CheckBox randomColorBox, inwardModeBox, oneLineBox, bothSidesBox, dragonCurveBox, angleInvertionBox, isSpikeBox;
   int dir;
+  PixelWriter imgWriter;
+  PixelReader imgReader;
+  Rectangle mapRect;
+
+  double[] distFrom = new double[1];
 
   public static void main(String[] args) {
     Application.launch(args);
@@ -44,45 +55,24 @@ public class Fractal extends Application {
     resetButton.setOnAction(this::reset);
     resetButton.setText("Reset");
 
-    /*
-     * lengthMultiField = new IntField(0, 1000, 50);
-     * lengthMultiField.setPrefWidth(150);
-     * lengthMultiField.addEventFilter(KeyEvent.KEY_TYPED, new
-     * EventHandler<KeyEvent>() {
-     * 
-     * @Override public void handle(KeyEvent keyEvent){
-     * reset(new ActionEvent());
-     * addLineLayer(new ActionEvent());
-     * }
-     * });
-     * 
-     * lengthField = new IntField(0, 1000, 350);
-     * lengthField.setPrefWidth(150);
-     * lengthField.addEventFilter(KeyEvent.KEY_TYPED, new EventHandler<KeyEvent>() {
-     * 
-     * @Override public void handle(KeyEvent keyEvent) {
-     * reset(new ActionEvent());
-     * addLineLayer(new ActionEvent());
-     * }
-     * });
-     * 
-     * angleField = new IntField(-999, 999, 45);
-     * angleField.setPrefWidth(150);
-     * angleField.setModValue(360);
-     * angleField.addEventFilter(KeyEvent.KEY_TYPED, new EventHandler<KeyEvent>() {
-     * 
-     * @Override public void handle(KeyEvent keyEvent) {
-     * reset(new ActionEvent());
-     * addLineLayer(new ActionEvent());
-     * }
-     * });
-     */
+    leafThicknessField = new Slider(0, 99, 60);
+    leafThicknessField.setMajorTickUnit(10);
+    leafThicknessField.setShowTickMarks(true);
+    leafThicknessField.setShowTickLabels(true);
+    leafThicknessField.setPrefWidth(500);
+    leafThicknessField.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
+      @Override
+      public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing) {
+        reset(new ActionEvent());
+        addLineLayer(new ActionEvent());
+      }
+    });
 
     lengthMultiField = new Slider(0, 99, 60);
     lengthMultiField.setMajorTickUnit(10);
     lengthMultiField.setShowTickMarks(true);
     lengthMultiField.setShowTickLabels(true);
-    lengthMultiField.setPrefWidth(250);
+    lengthMultiField.setPrefWidth(500);
     lengthMultiField.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
       @Override
       public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing) {
@@ -96,7 +86,7 @@ public class Fractal extends Application {
     lengthField.setMinorTickCount(3);
     lengthField.setShowTickMarks(true);
     lengthField.setShowTickLabels(true);
-    lengthField.setPrefWidth(250);
+    lengthField.setPrefWidth(500);
     lengthField.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
       @Override
       public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing) {
@@ -110,7 +100,7 @@ public class Fractal extends Application {
     angleField.setMinorTickCount(1);
     angleField.setShowTickMarks(true);
     angleField.setShowTickLabels(true);
-    angleField.setPrefWidth(250);
+    angleField.setPrefWidth(500);
     angleField.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
       @Override
       public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing) {
@@ -118,7 +108,10 @@ public class Fractal extends Application {
         addLineLayer(new ActionEvent());
       }
     });
+    angleField.setValue(135);
 
+    isSpikeBox = new CheckBox("Spike On");
+    isSpikeBox.setOnAction(this::reset);
     randomColorBox = new CheckBox("Randomize Colors");
     inwardModeBox = new CheckBox("Inward Mode");
     inwardModeBox.setOnAction(this::changeDirectionMode);
@@ -131,8 +124,8 @@ public class Fractal extends Application {
     bothSidesBox = new CheckBox("Both Sides");
     bothSidesBox.setOnAction(this::reset);
 
-    menuPanel = new VBox(addLineButton, resetButton, lengthMultiField, lengthField, angleField, randomColorBox,
-        inwardModeBox, oneLineBox, bothSidesBox, dragonCurveBox, angleInvertionBox);
+    menuPanel = new VBox(addLineButton, resetButton, leafThicknessField, lengthMultiField, lengthField, angleField,
+        isSpikeBox, randomColorBox, inwardModeBox, oneLineBox, bothSidesBox, dragonCurveBox, angleInvertionBox);
     menuPanel.setSpacing(20);
     menuPanel.setAlignment(Pos.CENTER);
 
@@ -140,11 +133,18 @@ public class Fractal extends Application {
     lineList = lineGroup.getChildren();
     topLines = new ArrayList<SmartLine>();
 
+    WritableImage img = new WritableImage(displaySizeX, displaySizeY);
+    imgWriter = img.getPixelWriter();
+    imgReader = img.getPixelReader();
+
+    mapRect = new Rectangle(0, 0, displaySizeX, displaySizeY);
+    mapRect.setFill(new ImagePattern(img));
+
     stage = stageIn;
     stage.setTitle("Fractal");
     reset(new ActionEvent());
 
-    stage.setScene(new Scene(lineGroup, 1800, 900));
+    stage.setScene(new Scene(lineGroup, displaySizeX, displaySizeY));
     stage.show();
 
   }
@@ -156,7 +156,7 @@ public class Fractal extends Application {
       if (!oneLineBox.isSelected()) {
         boolean doOnce = true;
         ArrayList<SmartLine> tempList;
-        while (lineList.size() <= 10000 || doOnce) {
+        while (lineList.size() <= 10 || doOnce) {
           tempList = new ArrayList<>();
           lineLength *= lengthMultiField.getValue() / 100.0;
           for (SmartLine mainLine : topLines) {
@@ -204,7 +204,7 @@ public class Fractal extends Application {
       ArrayList<SmartLine> tempList;
       while (/* lineList.size() <= 10000 || */ doOnce) {
         tempList = new ArrayList<>();
-        lineList.remove(1, lineList.size());
+        lineList.remove(2, lineList.size());
         lineLength /= (2 * Math.cos(angleChange));
         for (SmartLine mainLine : topLines) {
           curLine = new SmartLine(mainLine.getStartX(), mainLine.getStartY(),
@@ -235,11 +235,14 @@ public class Fractal extends Application {
         topLines = tempList;
       }
     }
+    // setSquareColor();
+    colorAll();
   }
 
   public void reset(ActionEvent event) {
 
     lineList.clear();
+    lineList.add(mapRect);
     lineList.add(menuPanel);
     topLines.clear();
     dir = 1;
@@ -249,17 +252,168 @@ public class Fractal extends Application {
     if (!inwardModeBox.isSelected()) {
       if (bothSidesBox.isSelected()) {
         prevLine = new SmartLine(900 + lineLength / 2, 450, 900 - lineLength / 2, 450, Math.PI);
+        System.out.println(prevLine.getAngle());
+        System.out.println(new SmartLine(900 + lineLength / 2, 450, 900 - lineLength / 2, 450).getAngle());
         lineList.add(prevLine);
         topLines.add(prevLine);
         prevLine = new SmartLine(900 - lineLength / 2, 450, 900 + lineLength / 2, 450, 0);
+        System.out.println(prevLine.getAngle());
+        System.out.println(new SmartLine(900 - lineLength / 2, 450, 900 + lineLength / 2, 450).getAngle());
       } else {
-        prevLine = new SmartLine(900, 800, 900, 800 - lineLength, -Math.PI / 2);
+        prevLine = new SmartLine(900, 800, 900, 800 - lineLength, 3 * Math.PI / 2);
+        System.out.println(prevLine.getAngle());
+        System.out.println(new SmartLine(900, 800, 900, 800 - lineLength).getAngle());
       }
     } else {
       prevLine = new SmartLine(900 - lineLength / 2, 450, 900 + lineLength / 2, 450, 0);
+      System.out.println(prevLine.getAngle());
+      System.out.println(new SmartLine(900 - lineLength / 2, 450, 900 + lineLength / 2, 450).getAngle());
     }
+
+    // prevLine = new SmartLine(900, 800, 900, 800-lineLength, -Math.PI/2);
+
     lineList.add(prevLine);
     topLines.add(prevLine);
+    // setSquareColor();
+
+    for (int i = 0, j; i < displaySizeX; i++) {
+      for (j = 0; j < displaySizeY; j++) {
+        imgWriter.setColor(i, j, Color.WHITE);
+      }
+    }
+    colorAll();
+  }
+
+  public boolean checkCollisionWithLine(double ax, double ay, double bx, double by, double angle, double cx, double cy,
+      double r) {
+    double dist = Math.sqrt(distFromLine(ax, ay, bx, by, cx, cy));
+    if (spike) {
+      if (dist == Math.sqrt(distSquared(ax, ay, cx, cy))) {
+        angle = getAngle(ax, ay, cx, cy, angle);
+        angle /= Math.PI / 2;
+        r += r * angle * angle;
+      } else if (dist == Math.sqrt(distSquared(bx, by, cx, cy))) {
+        angle = getAngle(bx, by, cx, cy, angle);
+        angle /= Math.PI / 2;
+        r += r * angle * angle;
+
+      }
+    }
+    return r - dist > 0 ? true : false;
+  }
+
+  public double getAngle(double x1, double y1, double x2, double y2, double angleIn) {
+    x1 -= x2;
+    y1 -= y2;
+
+    double angle = Math.atan2(-y1, x1);
+
+    // We need to map to coord system when 0 degree is at 3 O'clock, 270 at 12
+    // O'clock
+    if (angle < 0)
+      angle = Math.abs(angle);
+    else
+      angle = 2 * Math.PI - angle;
+    if (angle >= 2 * Math.PI) {
+      angle %= 2 * Math.PI;
+    }
+    angle -= angleIn;
+    angle = angle >= 0 ? angle : 2 * Math.PI + angle;
+    if (angle > Math.PI) {
+      angle -= Math.PI;
+    }
+    angle -= Math.PI / 2;
+    return angle >= 0 ? angle : -angle;
+  }
+
+  double distSquared(double x1, double y1, double x2, double y2) {
+    x1 -= x2;
+    y1 -= y2;
+    return x1 * x1 + y1 * y1;
+  }
+
+  double distFromLine(double lx1, double ly1, double lx2, double ly2, double px, double py) {
+    double line_dist = distSquared(lx1, ly1, lx2, ly2);
+    if (line_dist == 0)
+      return distSquared(px, py, lx1, ly1);
+    double t = ((px - lx1) * (lx2 - lx1) + (py - ly1) * (ly2 - ly1)) / line_dist;
+    t = Math.max(0, Math.min(1, t));
+    return distSquared(px, py, lx1 + t * (lx2 - lx1), ly1 + t * (ly2 - ly1));
+  }
+
+  public boolean isColliding(double x, double y) {
+    double radius = leafThicknessField.getValue();
+    for (int i = 2, size = lineList.size(); i < size; i++) {
+      SmartLine line = (SmartLine) lineList.get(i);
+      if (checkCollisionWithLine(line.getEndX(), line.getEndY(), line.getStartX(), line.getStartY(), line.getAngle(), x,
+          y, radius)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public void setSquareColor() {
+    for (int i = 0, j; i < displaySizeX; i++) {
+      for (j = 0; j < displaySizeY; j++) {
+        imgWriter.setColor(i, j, isColliding(i, j) ? Color.LIGHTGREEN : Color.WHITE);
+      }
+    }
+  }
+
+  public void colorAll() {
+    if (leafThicknessField.getValue() == 0)
+      return;
+    for (int i = 2, size = lineList.size(); i < size; i++) {
+      colorLine((SmartLine) lineList.get(i));
+    }
+  }
+
+  public double getColor(double ax, double ay, double bx, double by, double angle, double cx, double cy, double r) {
+    double dist = Math.sqrt(distFromLine(ax, ay, bx, by, cx, cy));
+    if (isSpikeBox.isSelected()) {
+      if (dist == Math.sqrt(distSquared(ax, ay, cx, cy))) {
+        angle = getAngle(ax, ay, cx, cy, angle);
+        angle /= Math.PI / 2;
+        r += r * angle * angle;
+      } else if (dist == Math.sqrt(distSquared(bx, by, cx, cy))) {
+        angle = getAngle(bx, by, cx, cy, angle);
+        angle /= Math.PI / 2;
+        r += r * angle * angle;
+
+      }
+    }
+    return Math.max(r - dist, 0) / r;
+  }
+
+  public void colorLine(SmartLine line) {
+    int radius = (int) leafThicknessField.getValue();
+    int minX, minY, maxX, maxY;
+
+    if (line.getEndX() > line.getStartX()) {
+      maxX = Math.min(displaySizeX, (int) line.getEndX()) + 2 * radius;
+      minX = Math.max(0, (int) line.getStartX() - 2 * radius);
+    } else {
+      maxX = Math.min(displaySizeX, (int) line.getStartX() + 2 * radius);
+      minX = Math.max(0, (int) line.getEndX() - 2 * radius);
+    }
+    if (line.getEndY() > line.getStartY()) {
+      maxY = Math.min(displaySizeY, (int) line.getEndY() + 2 * radius);
+      minY = Math.max(0, (int) line.getStartY() - 2 * radius);
+    } else {
+      maxY = Math.min(displaySizeY, (int) line.getStartY() + 2 * radius);
+      minY = Math.max(0, (int) line.getEndY() - 2 * radius);
+    }
+
+    for (int x = minX; x < maxX; x++) {
+      for (int y = minY; y < maxY; y++) {
+        double green = getColor(line.getEndX(), line.getEndY(), line.getStartX(), line.getStartY(), line.getAngle(), x,
+            y, radius);
+        Color col = imgReader.getColor(x, y);
+        imgWriter.setColor(x, y,
+            new Color(Math.min(1 - green, col.getRed()), 1, Math.min(1 - green, col.getBlue()), 1));
+      }
+    }
   }
 
   public void changeDirectionMode(ActionEvent event) {
