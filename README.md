@@ -1,5 +1,7 @@
 # GameCluster
 
+All of my random small Java apps, currently they are all run independantly but I hope to create a main application to quickly navigate between them.
+
 ## Current Game List:
 
 ### Minesweeper:
@@ -29,3 +31,15 @@ Creates a cool pattern that morphs over time. Very trippy. Very computationally 
 ### IKFun:
 
 This is an inverse kinematics simulator, lots of options for moving the ends of the "rope" and even allowing simple animation creation. I may improve apon the animation system and the interactablity of this, but that will require a large rewrite, which i currently dont have the time to do.
+
+### Gravity
+
+A clone of the Android app [Particle Flow](https://play.google.com/store/apps/details?id=com.nfaralli.particleflow&hl=en&gl=US). A bunch of paticles are generated and can create attraction points (Black Holes) using the right click, and drag them around with left click.
+
+### Percolation
+
+A visalization of Percolation, idea from [this Youtube video}(https://www.youtube.com/watch?v=a-767WnbaCQ&t)
+
+### LeafMaker
+
+A WIP fork of my 2D fractal maker that creates a green shadow around the fractal. The plan is to create the vein patterns in leaves (the fractal component) and connecting leavifiness (the green haze)
