@@ -38,7 +38,7 @@ A clone of the Android app [Particle Flow](https://play.google.com/store/apps/de
 
 ### Percolation
 
-A visalization of Percolation, idea from [this Youtube video}(https://www.youtube.com/watch?v=a-767WnbaCQ&t)
+A visalization of Percolation, idea from [this Youtube video](https://www.youtube.com/watch?v=a-767WnbaCQ&t)
 
 ### LeafMaker
 
