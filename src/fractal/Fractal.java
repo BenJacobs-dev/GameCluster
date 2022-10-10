@@ -4,16 +4,11 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 import javafx.scene.*;
 import javafx.scene.control.*;
-import javafx.scene.text.*;
 import javafx.scene.paint.*;
-import javafx.scene.shape.*;
 import javafx.scene.layout.*;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.geometry.Pos;
 import javafx.event.*;
 import java.util.*;
-import java.io.*;
 import javafx.collections.*;
 import javafx.beans.value.*;
 

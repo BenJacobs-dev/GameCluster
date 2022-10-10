@@ -1,26 +1,19 @@
+package iKFun;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import javafx.scene.*;
 import javafx.scene.control.*;
-import javafx.scene.text.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.layout.*;
 import javafx.scene.input.*;
-import javafx.geometry.*;
-import javafx.event.*;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.sun.corba.se.spi.activation._ActivatorImplBase;
-import com.sun.jndi.url.iiopname.iiopnameURLContextFactory;
-
-import java.io.*;
 import javafx.collections.*;
 import javafx.concurrent.Task;
-import javafx.beans.value.*;
 
 public class IKFun extends Application {
 

@@ -1,4 +1,3 @@
-import javafx.scene.input.*;
 import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.effect.*;

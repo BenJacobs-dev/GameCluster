@@ -8,12 +8,9 @@ import javafx.collections.*;
 import javafx.concurrent.*;
 import javafx.event.*;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.*;
 import javafx.scene.control.*;
-import javafx.scene.text.*;
 import javafx.scene.layout.*;
-import javafx.scene.input.*;
 import javafx.scene.shape.*;
 import javafx.scene.paint.*;
 import javafx.scene.image.*;
@@ -35,6 +32,11 @@ public class Percolation extends Application {
   PixelWriter imgWriter;
   final Semaphore semaphore = new Semaphore(1);
   final AtomicBoolean running = new AtomicBoolean(false);
+
+  Slider percolationSlider;
+  TextField lowerBoundField, upperBoundField, stepField;
+  CheckBox autoStepCheckBox, increasingButton;
+  Button stepButton;
 
   double connections[][];
   int grid[][];
@@ -72,7 +74,7 @@ public class Percolation extends Application {
       }
     });
 
-    Slider percolationSlider = new Slider(0, 1, percolation);
+    percolationSlider = new Slider(0, 1, percolation);
     percolationSlider.setShowTickLabels(true);
     percolationSlider.setShowTickMarks(true);
     percolationSlider.setMajorTickUnit(0.1);
@@ -86,9 +88,53 @@ public class Percolation extends Application {
       }
     });
 
-    VBox vbox = new VBox(restartButton, percolationSlider);
+    lowerBoundField = new TextField();
+    lowerBoundField.setText("0");
+    lowerBoundField.textProperty().addListener(new ChangeListener<String>() {
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        double val = getDouble(newValue);
+        if (val <= percolationSlider.getMax()) {
+          percolationSlider.setMin(Math.max(val, 0));
+        }
+      }
+    });
+    upperBoundField = new TextField();
+    upperBoundField.setText("1");
+    upperBoundField.textProperty().addListener(new ChangeListener<String>() {
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        double val = getDouble(newValue);
+        if (val >= percolationSlider.getMin()) {
+          percolationSlider.setMax(Math.min(val, 1));
+        }
+      }
+    });
+    stepField = new TextField();
+    stepField.setText("0.01");
+    stepField.textProperty().addListener(new ChangeListener<String>() {
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        percolationSlider.setBlockIncrement(getDouble(newValue));
+      }
+    });
+    stepButton = new Button("Step");
+    stepButton.setOnAction(this::step);
+    autoStepCheckBox = new CheckBox("Auto Step");
+    increasingButton = new CheckBox("Decreasing");
+    increasingButton.setOnAction(new EventHandler<ActionEvent>() {
+      public void handle(ActionEvent event) {
+        if (increasingButton.isSelected()) {
+          increasingButton.setText("Increasing");
+        } else {
+          increasingButton.setText("Decreasing");
+        }
+      }
+    });
+    increasingButton.fire();
+
+    VBox vbox = new VBox(restartButton, percolationSlider, lowerBoundField, upperBoundField, stepField, stepButton,
+        autoStepCheckBox, increasingButton);
     vbox.setSpacing(10);
     vbox.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+    vbox.setPadding(new Insets(10, 10, 10, 10));
 
     nodeList.add(mapRect);
     nodeList.add(vbox);
@@ -112,9 +158,9 @@ public class Percolation extends Application {
             time = System.currentTimeMillis();
 
             Platform.runLater(() -> {
-              clearScreen();
-              update();
-              draw();
+              if (autoStepCheckBox.isSelected()) {
+                step(null);
+              }
               semaphore.release();
             });
           }
@@ -125,7 +171,7 @@ public class Percolation extends Application {
       }
     };
 
-    // new Thread(task).start();
+    new Thread(task).start();
 
     restart();
     update();
@@ -137,6 +183,26 @@ public class Percolation extends Application {
       for (int y = 0; y < screenHeight; y++) {
         imgWriter.setColor(x, y, Color.BLACK);
       }
+    }
+  }
+
+  public void step(ActionEvent event) {
+    double cur = percolationSlider.getValue();
+    if (cur >= percolationSlider.getMax() || cur <= percolationSlider.getMin()) {
+      increasingButton.fire();
+    }
+    if (increasingButton.isSelected()) {
+      percolationSlider.increment();
+    } else {
+      percolationSlider.decrement();
+    }
+  }
+
+  public double getDouble(String text) {
+    try {
+      return Double.parseDouble(text);
+    } catch (Exception e) {
+      return 0;
     }
   }
 

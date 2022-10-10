@@ -4,7 +4,7 @@ import javafx.scene.shape.Line;
 
 public class SmartLine extends Line {
 
-  private double length, angle;
+  private double angle;
 
   SmartLine(double sX, double sY, double eX, double eY, double angleIn) {
     super(sX, sY, eX, eY);
