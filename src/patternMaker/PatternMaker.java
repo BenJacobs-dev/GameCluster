@@ -8,7 +8,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.*;
 import javafx.concurrent.*;
-import javafx.event.*;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.*;
 import javafx.scene.control.*;
@@ -26,8 +26,8 @@ public class PatternMaker extends Application {
   // Edit here //
   ///////////////////////////////////////////////
 
-  int modNum = 17, screen = 700, pixelSize = 6, blackStart = 10, fps = 1000;
-  double xMulti = 1.75, multiIn = 0.00001;
+  int modNum = 17, screen = 1000, pixelSize = 5, blackStart = 10, fps = 1000;
+  double xMulti = 1;
 
   ///////////////////////////////////////////////
 
@@ -36,7 +36,6 @@ public class PatternMaker extends Application {
       displaySizeY = sizeY * mapSizeY, fpsMulti = 1000 / fps;
 
   Stage stage;
-  int grid[][], gridIndex[];
   Rectangle player;
   HashMap<KeyCode, Runnable> keyActions;
   LinkedList<KeyCode> keysPressed;
@@ -48,7 +47,8 @@ public class PatternMaker extends Application {
   boolean playing;
   Text fpsCounterText;
   int ballAddCounter;
-  volatile double multi = 1;
+  double multi = 1, multiStep = 0.00001;
+  Text curMultiVal;
 
   public static void main(String[] args) {
     Application.launch(args);
@@ -66,33 +66,35 @@ public class PatternMaker extends Application {
 
     Rectangle mapRect = new Rectangle(0, 0, displaySizeX, displaySizeY);
 
-    /*
-     * grid = new int[sizeX][sizeY];
-     * for(int i = 0, j; i < sizeX; i++) {
-     * for(j = 0; j < sizeY; j++) {
-     * grid[i][j] = (int)((i*j*multi*multi)/10%modNum);
-     * }
-     * }
-     */
-
     WritableImage img = new WritableImage(displaySizeX, displaySizeY);
     imgWriter = img.getPixelWriter();
     mapRect.setFill(new ImagePattern(img));
-    // updateGrid();
 
-    TextField valTextIn = new TextField();
+    TextField valTextIn = new TextField(multi + "");
     valTextIn.setAlignment(Pos.CENTER);
-    valTextIn.setOnAction(new EventHandler<ActionEvent>() {
+    valTextIn.textProperty().addListener(new ChangeListener<String>() {
       @Override
-      public void handle(ActionEvent event) {
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
         try {
-          multi = Double.parseDouble(valTextIn.getText());
+          multi = Double.parseDouble(newValue);
 
         } catch (Exception e) {
           multi = 1;
         }
-        // multi *= modNum;
-        // updateGrid();
+      }
+    });
+
+    TextField multiTextIn = new TextField(multiStep + "");
+    multiTextIn.setAlignment(Pos.CENTER);
+    multiTextIn.textProperty().addListener(new ChangeListener<String>() {
+      @Override
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        try {
+          multiStep = Double.parseDouble(newValue);
+
+        } catch (Exception e) {
+          multiStep = 0.00001;
+        }
       }
     });
 
@@ -102,32 +104,25 @@ public class PatternMaker extends Application {
     valSliderIn.setShowTickMarks(true);
     valSliderIn.setShowTickLabels(true);
     valSliderIn.setPrefWidth(250);
-    valSliderIn.setSnapToTicks(true);
-    valSliderIn.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
+    valSliderIn.valueProperty().addListener(new ChangeListener<Number>() {
       @Override
-      public void changed(ObservableValue<? extends Boolean> observableValue, Boolean wasChanging, Boolean changing) {
-        if (wasChanging) {
-          try {
-            multi = Double.parseDouble(valTextIn.getText());
+      public void changed(ObservableValue<? extends Number> observableValue, Number wasChanging, Number changing) {
+        try {
+          multi = Double.parseDouble(valTextIn.getText());
 
-          } catch (Exception e) {
-            multi = 1;
-          }
-          String[] splitStrings = valTextIn.getText().split("\\.");
-          if (splitStrings.length > 1) {
-            multi += Math.pow(10, -1 * splitStrings[1].length()) * (((int) (valSliderIn.getValue())) / 10.0);
-          } else {
-            multi += valSliderIn.getValue();
-          }
-
-          // valTextIn.setText(valTextIn.getText()+((int)(valSliderIn.getValue())));
-          // updateGrid();
+        } catch (Exception e) {
+          multi = 1;
         }
+          multi += valSliderIn.getValue();
       }
     });
 
-    VBox inputBox = new VBox(valTextIn, valSliderIn);
+    curMultiVal = new Text("Multi: " + multi);
+
+    VBox inputBox = new VBox(valTextIn, valSliderIn, curMultiVal, multiTextIn);
     inputBox.setAlignment(Pos.BOTTOM_LEFT);
+    inputBox.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+    inputBox.setAlignment(Pos.CENTER);
 
     nodeList.add(mapRect);
     nodeList.add(inputBox);
@@ -151,10 +146,8 @@ public class PatternMaker extends Application {
             Thread.sleep(Math.max(fpsMulti + time - System.currentTimeMillis(), 0));
             time = System.currentTimeMillis();
 
-            multi += multiIn;
-
             Platform.runLater(() -> {
-              // updateGrid();
+              multi += multiStep;
               updateDisplay();
               semaphore.release();
             });
@@ -170,21 +163,12 @@ public class PatternMaker extends Application {
 
   }
 
-  /*
-   * public void updateGrid() {
-   * for(int i = 0, j; i < sizeX; i++) {
-   * for(j = 0; j < sizeY; j++) {
-   * grid[i][j] = grid[(i+1)%sizeX][(j+1)%sizeY];
-   * }
-   * }
-   * }
-   */
-
   public void updateDisplay() {
-    for (int i = 0, j; i < sizeX; i++) {
+    curMultiVal.setText("Multi: " + round(multi, 10));
+    for (int i = 0, j, hsx = sizeX/2, hsy = sizeY/2; i < sizeX; i++) {
       for (j = 0; j < sizeY; j++) {
-        setSquareColor((int) i, (int) j, colorList.get((int) ((i * j * multi * multi) / 10 % modNum)));
-        // setSquareColor(i, j, colorList.get(grid[i][j]));
+        setSquareColor((int) i, (int) j, colorList.get((int) (((Math.abs(i-hsx)+1) * (Math.abs(j-hsy)+1) * multi * multi) / 10 % modNum)));
+        //setSquareColor((int) i, (int) j, colorList.get((int) (i * j * multi * multi) / 10 % modNum));
       }
     }
   }
@@ -214,6 +198,16 @@ public class PatternMaker extends Application {
     for (blackStart = Math.min(blackStart, 7); blackStart < modNum; blackStart++) {
       colorList.put(blackStart, Color.BLACK);
     }
+  }
+
+  public double round(double value, int places) {
+    if (places < 0)
+      throw new IllegalArgumentException();
+
+    long factor = (long) Math.pow(10, places);
+    value = value * factor;
+    long tmp = Math.round(value);
+    return (double) tmp / factor;
   }
 
   @Override

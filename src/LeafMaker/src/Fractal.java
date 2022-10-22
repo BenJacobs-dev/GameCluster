@@ -442,7 +442,7 @@ public class Fractal extends Application {
             y, radius);
         if (x > 0 && x < displaySizeX - 1 && y > 0 && y < displaySizeY - 1 && green > 0) {
           Color col = imgReader.getColor(x, y);
-          Color newCol = Color.LIGHTGREEN.interpolate(Color.GREEN, green);
+          Color newCol = Color.LIGHTGREEN.interpolate(Color.DARKGREEN, green);
           imgWriter.setColor(x, y,
               new Color(Math.min(newCol.getRed(), col.getRed()), 1, Math.min(newCol.getBlue(), col.getBlue()), 1));
         }

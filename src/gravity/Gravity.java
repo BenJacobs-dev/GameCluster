@@ -20,8 +20,8 @@ public class Gravity extends Application {
   int screen = 500, pixelSize = 1, fps = 1000 / 1000, particleCount = 50000;
   int screenWidth = 1600, screenHeight = 900;
   double friction = 0.95, forceMulti = 2, jitter = 0.5;
-  int generationMode = 2; // 0: random, 1: circle, 2: outside
-  boolean blackHoleMode = true, bhmStopVelocity = true;
+  int generationMode = 1; // 0: random, 1: circle, 2: outside
+  boolean blackHoleMode = false, bhmStopVelocity = true;
 
   ///////////////////////////////////////////////
 
