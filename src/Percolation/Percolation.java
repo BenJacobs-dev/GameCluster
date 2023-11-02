@@ -51,7 +51,7 @@ public class Percolation extends Application {
   public void start(Stage primaryStage) {
 
     stage = primaryStage;
-    stage.setTitle("Gravity");
+    stage.setTitle("Percolation");
 
     restart();
 

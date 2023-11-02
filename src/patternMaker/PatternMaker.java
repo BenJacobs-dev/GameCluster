@@ -168,6 +168,8 @@ public class PatternMaker extends Application {
     for (int i = 0, j, hsx = sizeX/2, hsy = sizeY/2; i < sizeX; i++) {
       for (j = 0; j < sizeY; j++) {
         setSquareColor((int) i, (int) j, colorList.get((int) (((Math.abs(i-hsx)+1) * (Math.abs(j-hsy)+1) * multi * multi) / 10 % modNum)));
+        //setSquareColor((int) i, (int) j, colorList.get((int) (((Math.abs(i-hsx)+1) * (Math.abs(j-hsy)+1) * multi * multi+i*multi*multi+j*multi) / 10 % modNum)));
+        //setSquareColor((int) i, (int) j, colorList.get((int) (((Math.abs(i-hsx)+1) * (Math.abs(j-hsy)+1) * multi * multi+i*multi*multi+j*multi+i*i) / 10 % modNum)));
         //setSquareColor((int) i, (int) j, colorList.get((int) (i * j * multi * multi) / 10 % modNum));
       }
     }
