@@ -16,7 +16,7 @@ import javafx.stage.*;
 public class MazeViewer extends Application {
 
   int[][] grid, prev;
-  int size = 300, mapSize = 1000 / size, displaySize = size * mapSize, delayTime = 0, searchDelayAddition = 0,
+  int size = 1300, mapSize = 1300 / size, displaySize = size * mapSize, delayTime = 0, searchDelayAddition = 0,
       xCreationStart, yCreationStart, xOnGridStart, yOnGridStart, xOnGridEnd, yOnGridEnd;
   LinkedList<int[]> pos;
   ArrayList<Integer> possibleSides;
