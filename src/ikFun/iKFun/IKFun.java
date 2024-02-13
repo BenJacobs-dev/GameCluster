@@ -2,6 +2,8 @@ package iKFun;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.stage.Stage;
 import javafx.scene.*;
 import javafx.scene.control.*;
@@ -29,6 +31,8 @@ public class IKFun extends Application {
   final Semaphore semaphore = new Semaphore(1);
   final AtomicBoolean running = new AtomicBoolean(false);
   double[] sAnimationPos, eAnimationPos;
+  TextField gravityTextField;
+  double gravity = 10;
 
   int fps = 60;
 
@@ -159,6 +163,13 @@ public class IKFun extends Application {
       animateStart = false;
       animateEnd = false;
     });
+    gravityTextField = new TextField();
+    gravityTextField.setText("10");
+    gravityTextField.textProperty().addListener(new ChangeListener<String>() {
+      public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        gravity = getDouble(newValue);
+      }
+    });
 
     Group nodeGroup = new Group();
     nodeList = nodeGroup.getChildren();
@@ -169,7 +180,7 @@ public class IKFun extends Application {
     lineLengthsList.add(getLength(lineList.get(0)));
 
     VBox buttonsBox = new VBox(addLineButton, splitLineButton, removeLineButton, smoothLineButton, resetLineButton,
-        centerXLineButton, addAnimationButton, removeAnimationButton);
+        centerXLineButton, addAnimationButton, removeAnimationButton, gravityTextField);
 
     constantsGroup = new ArrayList<>();
     constantsGroup.add(start);
@@ -309,6 +320,14 @@ public class IKFun extends Application {
     }
   }
 
+  public double getDouble(String text) {
+    try {
+      return Double.parseDouble(text);
+    } catch (Exception e) {
+      return 0;
+    }
+  }
+
   public double getLength(Line line) {
     double x = line.getStartX() - line.getEndX();
     double y = line.getStartY() - line.getEndY();
@@ -323,13 +342,13 @@ public class IKFun extends Application {
 
   public double getAngleAnchorStart(Line line) {
     double x = line.getStartX() - line.getEndX();
-    double y = line.getStartY() - line.getEndY() - 10;
+    double y = line.getStartY() - line.getEndY() - gravity;
     return x < 0 ? TP + Math.atan(y / x) : Math.atan(y / x) + HP;
   }
 
   public double getAngleAnchorEnd(Line line) {
     double x = -(line.getStartX() - line.getEndX());
-    double y = -(line.getStartY() - line.getEndY() - 10);
+    double y = -(line.getStartY() - line.getEndY() - gravity);
     return x <= 0 ? TP + Math.atan(y / x) : Math.atan(y / x) + HP;
   }
 
